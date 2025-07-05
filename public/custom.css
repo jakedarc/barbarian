@@ -18,6 +18,7 @@
   padding: 0;
   scrollbar-width: none;
 }
+
 /* Filter bar for playlist */
 .playlist-filter {
   width: 100%;
@@ -34,6 +35,7 @@
   outline: none;
   border-color: #555;
 }
+
 /* Date range filter container */
 .date-filter-container {
   display: flex;
@@ -42,12 +44,46 @@
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* Pagination controls */
+.pagination-container {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.page-input:focus {
+  outline: none;
+  border-color: #555;
+}
+
+.page-info {
+  color: #ccc;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .date-filter-container label {
   color: #fff;
   font-size: 14px;
   white-space: nowrap;
   margin: 0;
 }
+
 /* Segmented date picker */
 .segmented-date {
   display: flex;
@@ -80,6 +116,7 @@
   font-size: 16px;
   user-select: none;
 }
+
 /* Shared button styles for custom controls */
 .custom-control-btn {
   padding: 6px 12px;
@@ -99,6 +136,7 @@
   outline: none;
   border-color: #555;
 }
+
 /* Legacy class names for backward compatibility */
 .date-clear-btn {
   padding: 6px 12px;
@@ -118,17 +156,18 @@
   outline: none;
   border-color: #555;
 }
-/* Style playlist as a separate full-width section */
+
+/* Style playlist as a separate full-width section - NO MORE SCROLLING */
 .playlist {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0; /* Allow it to shrink */
-  margin: 20px 0 0 0; /* Add some top margin for spacing */
-  padding: 0;
-  max-height: 300px; /* Fixed height */
-  height: 300px;
-  overflow-y: auto; /* Enable scrolling within playlist */
-  scrollbar-width: thin;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important; /* Allow it to shrink */
+  margin: 20px 0 0 0 !important; /* Add some top margin for spacing */
+  padding: 0 !important;
+  max-height: none !important; /* Remove any height constraints */
+  height: auto !important; /* Let it size naturally */
+  overflow: visible !important; /* No scrolling */
+  overflow-y: visible !important; /* No scrolling */
   border: 1px solid #333; /* Optional: add a border for visual separation */
   border-radius: 4px;
 }
@@ -138,7 +177,7 @@
   .chat {
     display: none !important;
   }
-  
+ 
   /* Hide the chat toggle button when chat is hidden */
   .custom-control-btn:last-child {
     display: none;
@@ -150,9 +189,10 @@
   display: flex;
   flex-direction: column; /* Stack info and playlist vertically */
   max-width: calc(100% - 40px); /* Account for 20px margin on each side */
-  margin: 0 auto; /* Center the entire bottom section */
+  margin: 0 40px 0 40px; /* Center the entire bottom section */
   box-sizing: border-box;
 }
+
 /* Ensure info takes full width within the bottom container */
 .info {
   width: 100%;

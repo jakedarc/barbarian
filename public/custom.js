@@ -112,9 +112,15 @@ class SegmentedDatePicker {
   }
 }
 
-// Add filters to the playlist
+// Add filters and pagination to the playlist
 const playlist = document.querySelector('.playlist');
 if (playlist) {
+  // Pagination state
+  let currentPage = 1;
+  const itemsPerPage = 20;
+  let allItems = [];
+  let filteredItems = [];
+
   // Create title filter
   const titleFilter = document.createElement('input');
   titleFilter.type = 'text';
@@ -173,10 +179,39 @@ if (playlist) {
   dateContainer.appendChild(toDate);
   dateContainer.appendChild(clearBtn);
   dateContainer.appendChild(chatToggleBtn);
+
+  // Create pagination container
+  const paginationContainer = document.createElement('div');
+  paginationContainer.className = 'pagination-container';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = '← Previous';
+  prevBtn.className = 'custom-control-btn';
+  prevBtn.type = 'button';
+
+  const pageInput = document.createElement('input');
+  pageInput.type = 'number';
+  pageInput.className = 'page-input';
+  pageInput.min = '1';
+  pageInput.placeholder = '1';
+
+  const pageInfo = document.createElement('span');
+  pageInfo.className = 'page-info';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next →';
+  nextBtn.className = 'custom-control-btn';
+  nextBtn.type = 'button';
+
+  paginationContainer.appendChild(prevBtn);
+  paginationContainer.appendChild(pageInput);
+  paginationContainer.appendChild(pageInfo);
+  paginationContainer.appendChild(nextBtn);
  
   // Insert filters before the playlist
   playlist.parentNode.insertBefore(titleFilter, playlist);
   playlist.parentNode.insertBefore(dateContainer, playlist);
+  playlist.parentNode.insertBefore(paginationContainer, playlist);
  
   // Initialize the date pickers with linkage
   const fromPicker = new SegmentedDatePicker(fromDate);
@@ -184,10 +219,78 @@ if (playlist) {
   
   // Link the pickers so fromPicker can advance to toPicker
   fromPicker.nextPicker = toPicker;
+
+  // Initialize items array
+  function initializeItems() {
+    // Try multiple selectors to find the video items
+    let items = playlist.querySelectorAll('.other_video_anchor');
+    if (items.length === 0) {
+      // Try alternative selectors
+      items = playlist.querySelectorAll('a[href*="watch"]');
+    }
+    if (items.length === 0) {
+      items = playlist.querySelectorAll('li');
+    }
+    if (items.length === 0) {
+      items = playlist.children;
+    }
+    
+    console.log('Found', items.length, 'playlist items');
+    allItems = Array.from(items);
+    filteredItems = [...allItems];
+  }
  
   // Helper function to parse date from "Jul 2, 2025" format
   function parseVideoDate(dateStr) {
     return new Date(dateStr);
+  }
+
+  // Update pagination info and controls
+  function updatePaginationControls() {
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    
+    pageInfo.textContent = `of ${totalPages} (${filteredItems.length} videos)`;
+    pageInput.max = totalPages;
+    pageInput.value = currentPage;
+    
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+    
+    // Update button styles based on disabled state
+    if (prevBtn.disabled) {
+      prevBtn.style.opacity = '0.5';
+      prevBtn.style.cursor = 'not-allowed';
+    } else {
+      prevBtn.style.opacity = '1';
+      prevBtn.style.cursor = 'pointer';
+    }
+    
+    if (nextBtn.disabled) {
+      nextBtn.style.opacity = '0.5';
+      nextBtn.style.cursor = 'not-allowed';
+    } else {
+      nextBtn.style.opacity = '1';
+      nextBtn.style.cursor = 'pointer';
+    }
+  }
+
+  // Display items for current page
+  function displayCurrentPage() {
+    // Hide all items
+    allItems.forEach(item => {
+      item.style.display = 'none';
+    });
+    
+    // Show items for current page
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const itemsToShow = filteredItems.slice(startIndex, endIndex);
+    
+    itemsToShow.forEach(item => {
+      item.style.display = 'block';
+    });
+    
+    updatePaginationControls();
   }
  
   // Combined filter function
@@ -196,24 +299,63 @@ if (playlist) {
     const fromDateVal = fromPicker.getDate();
     const toDateVal = toPicker.getDate();
    
-    const items = playlist.querySelectorAll('.other_video_anchor');
-   
-    items.forEach(item => {
-      const title = item.querySelector('.other_video_title').textContent.toLowerCase();
-      const dateStr = item.querySelector('.other_video_view_count_date').textContent;
-      const videoDate = parseVideoDate(dateStr);
-     
+    // Filter items based on criteria
+    filteredItems = allItems.filter(item => {
+      // Try to find title and date elements with multiple selectors
+      let titleElement = item.querySelector('.other_video_title');
+      if (!titleElement) {
+        titleElement = item.querySelector('h3, h4, .title, [class*="title"]');
+      }
+      
+      let dateElement = item.querySelector('.other_video_view_count_date');
+      if (!dateElement) {
+        dateElement = item.querySelector('.date, [class*="date"], [class*="time"]');
+      }
+      
+      if (!titleElement) return true; // If we can't find title, show it
+      
+      const title = titleElement.textContent.toLowerCase();
+      
       // Check title filter
       const titleMatch = title.includes(titleTerm);
      
       // Check date range filter
       let dateMatch = true;
-      if (fromDateVal && videoDate < fromDateVal) dateMatch = false;
-      if (toDateVal && videoDate > toDateVal) dateMatch = false;
+      if (dateElement && (fromDateVal || toDateVal)) {
+        const dateStr = dateElement.textContent;
+        const videoDate = parseVideoDate(dateStr);
+        if (fromDateVal && videoDate < fromDateVal) dateMatch = false;
+        if (toDateVal && videoDate > toDateVal) dateMatch = false;
+      }
      
-      // Show item only if both filters pass
-      item.style.display = (titleMatch && dateMatch) ? 'block' : 'none';
+      return titleMatch && dateMatch;
     });
+
+    // Reset to page 1 when filters change
+    currentPage = 1;
+    displayCurrentPage();
+  }
+
+  // Page navigation functions
+  function goToPage(pageNum) {
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      currentPage = pageNum;
+      displayCurrentPage();
+    }
+  }
+
+  function goToPrevPage() {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  }
+
+  function goToNextPage() {
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+    }
   }
  
   // Clear date filters
@@ -246,4 +388,42 @@ if (playlist) {
   
   clearBtn.addEventListener('click', clearDateFilters);
   chatToggleBtn.addEventListener('click', toggleChat);
+
+  // Pagination event listeners
+  prevBtn.addEventListener('click', goToPrevPage);
+  nextBtn.addEventListener('click', goToNextPage);
+  
+  pageInput.addEventListener('change', (e) => {
+    const pageNum = parseInt(e.target.value);
+    goToPage(pageNum);
+  });
+
+  pageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const pageNum = parseInt(e.target.value);
+      goToPage(pageNum);
+    }
+  });
+
+  // Initialize everything - wait for content to load
+  function initialize() {
+    initializeItems();
+    if (allItems.length === 0) {
+      // Content might not be loaded yet, try again in a moment
+      setTimeout(() => {
+        initializeItems();
+        if (allItems.length > 0) {
+          displayCurrentPage();
+        }
+      }, 1000);
+    } else {
+      displayCurrentPage();
+    }
+  }
+
+  // Try to initialize immediately and also after page load
+  initialize();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  }
 }
