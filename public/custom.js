@@ -117,7 +117,7 @@ const playlist = document.querySelector('.playlist');
 if (playlist) {
   // Pagination state
   let currentPage = 1;
-  const itemsPerPage = 20;
+  let itemsPerPage = 25;
   let allItems = [];
   let filteredItems = [];
 
@@ -198,6 +198,25 @@ if (playlist) {
   const pageInfo = document.createElement('span');
   pageInfo.className = 'page-info';
 
+  const itemsPerPageLabel = document.createElement('span');
+  itemsPerPageLabel.className = 'page-info';
+  itemsPerPageLabel.textContent = 'Items per page:';
+
+  const itemsPerPageInput = document.createElement('select');
+  itemsPerPageInput.className = 'items-per-page-input';
+  
+  // Common pagination options used across the web
+  const pageOptions = [10, 25, 50, 100];
+  pageOptions.forEach(option => {
+    const optionElement = document.createElement('option');
+    optionElement.value = option;
+    optionElement.textContent = option;
+    if (option === itemsPerPage) {
+      optionElement.selected = true;
+    }
+    itemsPerPageInput.appendChild(optionElement);
+  });
+
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next →';
   nextBtn.className = 'custom-control-btn';
@@ -206,6 +225,8 @@ if (playlist) {
   paginationContainer.appendChild(prevBtn);
   paginationContainer.appendChild(pageInput);
   paginationContainer.appendChild(pageInfo);
+  paginationContainer.appendChild(itemsPerPageLabel);
+  paginationContainer.appendChild(itemsPerPageInput);
   paginationContainer.appendChild(nextBtn);
  
   // Insert filters before the playlist
@@ -403,6 +424,14 @@ if (playlist) {
       const pageNum = parseInt(e.target.value);
       goToPage(pageNum);
     }
+  });
+
+  // Items per page event listeners
+  itemsPerPageInput.addEventListener('change', (e) => {
+    const newItemsPerPage = parseInt(e.target.value);
+    itemsPerPage = newItemsPerPage;
+    currentPage = 1; // Reset to first page
+    displayCurrentPage();
   });
 
   // Initialize everything - wait for content to load

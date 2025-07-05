@@ -66,7 +66,19 @@
   box-sizing: border-box;
 }
 
-.page-input:focus {
+.items-per-page-input {
+  padding: 6px 8px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.page-input:focus,
+.items-per-page-input:focus {
   outline: none;
   border-color: #555;
 }
@@ -168,8 +180,8 @@
   height: auto !important; /* Let it size naturally */
   overflow: visible !important; /* No scrolling */
   overflow-y: visible !important; /* No scrolling */
-  border: 1px solid #333; /* Optional: add a border for visual separation */
-  border-radius: 4px;
+  border: none !important; /* Remove any borders */
+  border-radius: 0 !important; /* Remove border radius too */
 }
 
 /* Responsive: Hide chat on mobile/smaller screens */
@@ -188,8 +200,8 @@
 .bottom {
   display: flex;
   flex-direction: column; /* Stack info and playlist vertically */
-  max-width: calc(100% - 40px); /* Account for 20px margin on each side */
-  margin: 0 40px 0 40px; /* Center the entire bottom section */
+  max-width: calc(100% - 240px); /* Account for 120px margin on each side */
+  margin: 0 120px; /* 120px on each side */
   box-sizing: border-box;
 }
 
