@@ -5,12 +5,12 @@
   max-height: 80vh;
 }
 
-/* Remove playlist from the flex container with chat */
+/* Hide chat by default - user can show it with the toggle button */
 .chat {
   --w: 300px;
   max-width: var(--w);
   min-width: var(--w);
-  display: flex;
+  display: none; /* Hidden by default */
   flex-flow: column nowrap;
   overflow: auto;
   list-style: none;
@@ -184,18 +184,6 @@
   border-radius: 0 !important; /* Remove border radius too */
 }
 
-/* Responsive: Hide chat on mobile/smaller screens */
-@media (max-width: 992px) {
-  .chat {
-    display: none !important;
-  }
- 
-  /* Hide the chat toggle button when chat is hidden */
-  .custom-control-btn:last-child {
-    display: none;
-  }
-}
-
 /* Make sure the bottom container stacks vertically and is properly sized */
 .bottom {
   display: flex;
@@ -203,6 +191,21 @@
   max-width: calc(100% - 240px); /* Account for 120px margin on each side */
   margin: 0 120px; /* 120px on each side */
   box-sizing: border-box;
+}
+
+/* Responsive margins for smaller screens */
+@media (max-width: 768px) {
+  .bottom {
+    max-width: calc(100% - 40px); /* Account for 20px margin on each side */
+    margin: 0 20px; /* Much smaller margins on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .bottom {
+    max-width: calc(100% - 20px); /* Account for 10px margin on each side */
+    margin: 0 10px; /* Even smaller margins on very small screens */
+  }
 }
 
 /* Ensure info takes full width within the bottom container */

@@ -169,7 +169,7 @@ if (playlist) {
   
   // Create chat toggle button
   const chatToggleBtn = document.createElement('button');
-  chatToggleBtn.textContent = 'Hide Chat';
+  chatToggleBtn.textContent = 'Show Chat';
   chatToggleBtn.className = 'custom-control-btn';
   chatToggleBtn.type = 'button';
  
@@ -390,8 +390,8 @@ if (playlist) {
   function toggleChat() {
     const chatElement = document.querySelector('.chat');
     if (chatElement) {
-      const isHidden = chatElement.style.display === 'none';
-      chatElement.style.display = isHidden ? '' : 'none';
+      const isHidden = chatElement.style.display === 'none' || getComputedStyle(chatElement).display === 'none';
+      chatElement.style.display = isHidden ? 'flex' : 'none';
       chatToggleBtn.textContent = isHidden ? 'Hide Chat' : 'Show Chat';
     }
   }
