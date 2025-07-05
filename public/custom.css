@@ -174,7 +174,7 @@
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important; /* Allow it to shrink */
-  margin: 20px 0 0 0 !important; /* Add some top margin for spacing */
+  margin: 20px 0 20px 0 !important; /* Add some top margin for spacing */
   padding: 0 !important;
   max-height: none !important; /* Remove any height constraints */
   height: auto !important; /* Let it size naturally */
