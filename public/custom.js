@@ -180,7 +180,7 @@ if (playlist) {
   dateContainer.appendChild(clearBtn);
   dateContainer.appendChild(chatToggleBtn);
 
-  // Create pagination container
+  // Create pagination container (top)
   const paginationContainer = document.createElement('div');
   paginationContainer.className = 'pagination-container';
 
@@ -225,14 +225,45 @@ if (playlist) {
   paginationContainer.appendChild(prevBtn);
   paginationContainer.appendChild(pageInput);
   paginationContainer.appendChild(pageInfo);
+  paginationContainer.appendChild(nextBtn);
   paginationContainer.appendChild(itemsPerPageLabel);
   paginationContainer.appendChild(itemsPerPageInput);
-  paginationContainer.appendChild(nextBtn);
+
+  // Create bottom pagination container (duplicate)
+  const bottomPaginationContainer = document.createElement('div');
+  bottomPaginationContainer.className = 'pagination-container';
+
+  const bottomPrevBtn = document.createElement('button');
+  bottomPrevBtn.textContent = '← Previous';
+  bottomPrevBtn.className = 'custom-control-btn';
+  bottomPrevBtn.type = 'button';
+
+  const bottomPageInput = document.createElement('input');
+  bottomPageInput.type = 'number';
+  bottomPageInput.className = 'page-input';
+  bottomPageInput.min = '1';
+  bottomPageInput.placeholder = '1';
+
+  const bottomPageInfo = document.createElement('span');
+  bottomPageInfo.className = 'page-info';
+
+  const bottomNextBtn = document.createElement('button');
+  bottomNextBtn.textContent = 'Next →';
+  bottomNextBtn.className = 'custom-control-btn';
+  bottomNextBtn.type = 'button';
+
+  bottomPaginationContainer.appendChild(bottomPrevBtn);
+  bottomPaginationContainer.appendChild(bottomPageInput);
+  bottomPaginationContainer.appendChild(bottomPageInfo);
+  bottomPaginationContainer.appendChild(bottomNextBtn);
  
   // Insert filters before the playlist
   playlist.parentNode.insertBefore(titleFilter, playlist);
   playlist.parentNode.insertBefore(dateContainer, playlist);
   playlist.parentNode.insertBefore(paginationContainer, playlist);
+  
+  // Insert bottom pagination after the playlist
+  playlist.parentNode.insertBefore(bottomPaginationContainer, playlist.nextSibling);
  
   // Initialize the date pickers with linkage
   const fromPicker = new SegmentedDatePicker(fromDate);
@@ -269,30 +300,43 @@ if (playlist) {
   // Update pagination info and controls
   function updatePaginationControls() {
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const infoText = `of ${totalPages} (${filteredItems.length} videos)`;
     
-    pageInfo.textContent = `of ${totalPages} (${filteredItems.length} videos)`;
+    // Update both top and bottom pagination displays
+    pageInfo.textContent = infoText;
+    bottomPageInfo.textContent = infoText;
+    
     pageInput.max = totalPages;
     pageInput.value = currentPage;
+    bottomPageInput.max = totalPages;
+    bottomPageInput.value = currentPage;
     
+    // Update button states for both sets
     prevBtn.disabled = currentPage <= 1;
     nextBtn.disabled = currentPage >= totalPages;
+    bottomPrevBtn.disabled = currentPage <= 1;
+    bottomNextBtn.disabled = currentPage >= totalPages;
     
     // Update button styles based on disabled state
-    if (prevBtn.disabled) {
-      prevBtn.style.opacity = '0.5';
-      prevBtn.style.cursor = 'not-allowed';
-    } else {
-      prevBtn.style.opacity = '1';
-      prevBtn.style.cursor = 'pointer';
-    }
+    [prevBtn, bottomPrevBtn].forEach(btn => {
+      if (btn.disabled) {
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      } else {
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      }
+    });
     
-    if (nextBtn.disabled) {
-      nextBtn.style.opacity = '0.5';
-      nextBtn.style.cursor = 'not-allowed';
-    } else {
-      nextBtn.style.opacity = '1';
-      nextBtn.style.cursor = 'pointer';
-    }
+    [nextBtn, bottomNextBtn].forEach(btn => {
+      if (btn.disabled) {
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      } else {
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      }
+    });
   }
 
   // Display items for current page
@@ -358,24 +402,29 @@ if (playlist) {
   }
 
   // Page navigation functions
-  function goToPage(pageNum) {
+  function goToPage(pageNum, scrollToTop = false) {
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
     if (pageNum >= 1 && pageNum <= totalPages) {
       currentPage = pageNum;
       displayCurrentPage();
+      // Only scroll if requested (from bottom pagination)
+      if (scrollToTop) {
+        const searchBarPosition = titleFilter.getBoundingClientRect().top + window.pageYOffset;
+        window.scrollTo({ top: searchBarPosition - 30, behavior: 'auto' });
+      }
     }
   }
 
-  function goToPrevPage() {
+  function goToPrevPage(scrollToTop = false) {
     if (currentPage > 1) {
-      goToPage(currentPage - 1);
+      goToPage(currentPage - 1, scrollToTop);
     }
   }
 
-  function goToNextPage() {
+  function goToNextPage(scrollToTop = false) {
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
     if (currentPage < totalPages) {
-      goToPage(currentPage + 1);
+      goToPage(currentPage + 1, scrollToTop);
     }
   }
  
@@ -410,19 +459,35 @@ if (playlist) {
   clearBtn.addEventListener('click', clearDateFilters);
   chatToggleBtn.addEventListener('click', toggleChat);
 
-  // Pagination event listeners
-  prevBtn.addEventListener('click', goToPrevPage);
-  nextBtn.addEventListener('click', goToNextPage);
+  // Pagination event listeners (top controls)
+  prevBtn.addEventListener('click', () => goToPrevPage(false));
+  nextBtn.addEventListener('click', () => goToNextPage(false));
   
   pageInput.addEventListener('change', (e) => {
     const pageNum = parseInt(e.target.value);
-    goToPage(pageNum);
+    goToPage(pageNum, false);
   });
 
   pageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       const pageNum = parseInt(e.target.value);
-      goToPage(pageNum);
+      goToPage(pageNum, false);
+    }
+  });
+
+  // Bottom pagination event listeners
+  bottomPrevBtn.addEventListener('click', () => goToPrevPage(true));
+  bottomNextBtn.addEventListener('click', () => goToNextPage(true));
+  
+  bottomPageInput.addEventListener('change', (e) => {
+    const pageNum = parseInt(e.target.value);
+    goToPage(pageNum, true);
+  });
+
+  bottomPageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const pageNum = parseInt(e.target.value);
+      goToPage(pageNum, true);
     }
   });
 
