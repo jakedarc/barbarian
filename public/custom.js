@@ -1,3 +1,249 @@
+// Video Position Saving Functionality
+// Add this to the end of your existing custom.js file
+
+// Video position saving configuration
+const VIDEO_POSITION_CONFIG = {
+  saveInterval: 10, // Save position every 10 seconds
+  minSaveTime: 30, // Don't save positions for first 30 seconds
+  expireDays: 30, // Clear saved positions older than 30 days
+  resumeThreshold: 60 // Only offer resume if more than 60 seconds from start
+};
+
+// Global flag to prevent multiple setups
+const setupTracker = new Set();
+
+// Get video ID from current URL
+function getVideoId() {
+  const path = window.location.pathname;
+  const match = path.match(/\/(\d+)$/);
+  return match ? match[1] : null;
+}
+
+// Clean up old saved positions
+function cleanupOldPositions() {
+  const now = Date.now();
+  const expireTime = VIDEO_POSITION_CONFIG.expireDays * 24 * 60 * 60 * 1000;
+  
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('video_position_')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        if (data.timestamp && (now - data.timestamp > expireTime)) {
+          localStorage.removeItem(key);
+        }
+      } catch (e) {
+        // Remove corrupted entries
+        localStorage.removeItem(key);
+      }
+    }
+  });
+}
+
+// Save video position
+function saveVideoPosition(videoId, currentTime, duration) {
+  if (currentTime < VIDEO_POSITION_CONFIG.minSaveTime) return;
+  if (currentTime > duration - 30) return; // Don't save if near the end
+  
+  const positionData = {
+    time: currentTime,
+    duration: duration,
+    timestamp: Date.now()
+  };
+  
+  localStorage.setItem(`video_position_${videoId}`, JSON.stringify(positionData));
+}
+
+// Get saved video position
+function getSavedVideoPosition(videoId) {
+  try {
+    const data = localStorage.getItem(`video_position_${videoId}`);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Clear saved position for a video
+function clearVideoPosition(videoId) {
+  localStorage.removeItem(`video_position_${videoId}`);
+}
+
+// Format time for display
+function formatTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Auto-resume without prompt
+function autoResumeVideo(player, savedTime) {
+  console.log(`Auto-resuming video from ${formatTime(savedTime)}`);
+  isResuming = true;
+  
+  // Use a one-time event to ensure we only resume once
+  const onSeeked = () => {
+    console.log('Resume seek completed');
+    isResuming = false;
+    player.off('seeked', onSeeked);
+  };
+  
+  player.on('seeked', onSeeked);
+  player.currentTime(savedTime);
+}
+
+// Initialize video position saving
+function initializeVideoPositionSaving() {
+  const videoId = getVideoId();
+  if (!videoId) return;
+  
+  // Clean up old positions periodically
+  cleanupOldPositions();
+  
+  // Wait for Video.js to be ready
+  function waitForPlayer() {
+    const player = window.videojs && window.videojs.getPlayers();
+    const playerInstance = player && Object.values(player)[0];
+    
+    if (playerInstance && playerInstance.readyState() > 0) {
+      setupVideoPositionSaving(playerInstance, videoId);
+    } else {
+      setTimeout(waitForPlayer, 500);
+    }
+  }
+  
+  // Also try to find player by DOM element
+  function findPlayerByDOM() {
+    const videoElement = document.querySelector('video.vjs-tech');
+    if (videoElement && videoElement.player) {
+      setupVideoPositionSaving(videoElement.player, videoId);
+    } else if (window.videojs) {
+      // Try to get player by element
+      const playerDiv = document.querySelector('.video-js');
+      if (playerDiv && playerDiv.id) {
+        const player = window.videojs(playerDiv.id);
+        if (player) {
+          setupVideoPositionSaving(player, videoId);
+        }
+      }
+    }
+  }
+  
+  // Try both methods
+  waitForPlayer();
+  setTimeout(findPlayerByDOM, 1000);
+  
+  // Fallback: listen for Video.js ready event
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      waitForPlayer();
+      findPlayerByDOM();
+    }, 2000);
+  });
+}
+
+// Setup position saving for a player instance
+function setupVideoPositionSaving(player, videoId) {
+  const setupKey = `${videoId}_${player.id() || 'default'}`;
+  
+  // Prevent multiple setups for the same video/player
+  if (setupTracker.has(setupKey)) {
+    console.log('Video position saving already set up for:', setupKey);
+    return;
+  }
+  
+  setupTracker.add(setupKey);
+  console.log('Setting up video position saving for video:', videoId);
+  
+  let saveTimer;
+  let hasResumed = false;
+  let isResuming = false;
+  
+  // Save position periodically
+  const savePosition = () => {
+    if (isResuming) return; // Don't save while resuming
+    
+    const currentTime = player.currentTime();
+    const duration = player.duration();
+    
+    if (currentTime && duration && !isNaN(currentTime) && !isNaN(duration)) {
+      saveVideoPosition(videoId, currentTime, duration);
+    }
+  };
+  
+  // Start periodic saving
+  const startSaving = () => {
+    if (saveTimer) clearInterval(saveTimer);
+    saveTimer = setInterval(savePosition, VIDEO_POSITION_CONFIG.saveInterval * 1000);
+  };
+  
+  // Stop periodic saving
+  const stopSaving = () => {
+    if (saveTimer) {
+      clearInterval(saveTimer);
+      saveTimer = null;
+    }
+  };
+  
+  // Check for saved position and auto-resume
+  const checkSavedPosition = () => {
+    if (hasResumed || isResuming) return;
+    
+    const savedPosition = getSavedVideoPosition(videoId);
+    if (savedPosition && savedPosition.time > VIDEO_POSITION_CONFIG.resumeThreshold) {
+      hasResumed = true;
+      autoResumeVideo(player, savedPosition.time);
+    }
+  };
+  
+  // Event listeners
+  player.on('loadedmetadata', () => {
+    setTimeout(checkSavedPosition, 500);
+  });
+  
+  player.on('play', () => {
+    if (!isResuming) {
+      startSaving();
+    }
+  });
+  player.on('pause', () => {
+    if (!isResuming) {
+      savePosition();
+    }
+  });
+  player.on('seeked', () => {
+    if (!isResuming) {
+      savePosition();
+    }
+  });
+  player.on('ended', () => {
+    stopSaving();
+    clearVideoPosition(videoId);
+  });
+  
+  // Save position when page is about to unload
+  window.addEventListener('beforeunload', savePosition);
+  
+  // If video is already loaded, check immediately
+  if (player.readyState() >= 1) {
+    setTimeout(checkSavedPosition, 500);
+  }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeVideoPositionSaving);
+} else {
+  initializeVideoPositionSaving();
+}
+
+// Also initialize after a delay to catch late-loading players
+setTimeout(initializeVideoPositionSaving, 3000);
+
 // Segmented Date Picker Class
 class SegmentedDatePicker {
   constructor(container, nextPicker = null) {
