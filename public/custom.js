@@ -78,15 +78,21 @@ function formatTime(seconds) {
 
 // Auto-resume video without prompt
 function autoResumeVideo(player, savedTime) {
-  console.log(`Auto-resuming video from ${formatTime(savedTime)}`);
+  console.log(`Setting up auto-resume to ${formatTime(savedTime)}`);
   
-  const performSeek = () => {
-    console.log('Performing seek to', savedTime);
+  // Instead of seeking immediately, wait for user to press play
+  const onFirstPlay = () => {
+    console.log('User pressed play, now seeking to saved position');
+    player.off('play', onFirstPlay);
+    
+    // Pause immediately to seek
+    player.pause();
     
     const onSeeked = () => {
-      console.log('Resume completed');
+      console.log('Resume seek completed, resuming playback');
       player.isResuming = false;
       player.off('seeked', onSeeked);
+      player.play(); // Resume playback after seeking
     };
     
     player.isResuming = true;
@@ -94,31 +100,9 @@ function autoResumeVideo(player, savedTime) {
     player.currentTime(savedTime);
   };
   
-  // Check if video is ready for seeking
-  if (player.readyState() >= 2 && player.duration() > 0) { // HAVE_CURRENT_DATA or higher
-    console.log('Video ready, seeking immediately');
-    performSeek();
-  } else {
-    console.log('Video not ready, waiting for loadeddata event');
-    
-    const onLoadedData = () => {
-      console.log('Video loaded, now seeking');
-      player.off('loadeddata', onLoadedData);
-      // Add a small delay to ensure the video is fully ready
-      setTimeout(performSeek, 100);
-    };
-    
-    player.on('loadeddata', onLoadedData);
-    
-    // Fallback timeout in case loadeddata never fires
-    setTimeout(() => {
-      if (player.isResuming === undefined) { // Haven't started resuming yet
-        console.log('Timeout reached, attempting seek anyway');
-        player.off('loadeddata', onLoadedData);
-        performSeek();
-      }
-    }, 3000);
-  }
+  player.isResuming = true; // Set flag to prevent other interference
+  player.on('play', onFirstPlay);
+  console.log('Auto-resume will trigger on first play');
 }
 
 // Initialize video position saving
