@@ -94,7 +94,11 @@ function autoResumeVideo(player, savedTime) {
 // Initialize video position saving
 function initializeVideoPositionSaving() {
   const videoId = getVideoId();
-  if (!videoId) return;
+  if (!videoId) {
+    // If no video ID, wait for redirect and try again
+    setTimeout(initializeVideoPositionSaving, 1000);
+    return;
+  }
   
   cleanupOldPositions();
   
@@ -638,12 +642,26 @@ function initializePlaylistFeatures() {
 }
 
 // Initialize everything
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initializeVideoPositionSaving();
-    initializePlaylistFeatures();
-  });
-} else {
+function initializeAll() {
   initializeVideoPositionSaving();
   initializePlaylistFeatures();
+}
+
+// Watch for URL changes (including redirects)
+let lastUrl = location.href;
+function checkForUrlChange() {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    console.log('URL changed, reinitializing video position saving');
+    setTimeout(initializeVideoPositionSaving, 500);
+  }
+}
+
+// Check for URL changes periodically
+setInterval(checkForUrlChange, 1000);
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeAll);
+} else {
+  initializeAll();
 }
