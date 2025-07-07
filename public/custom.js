@@ -411,6 +411,56 @@ function initializePlaylistFeatures() {
   let allItems = [];
   let filteredItems = [];
 
+  // Add saved position indicators to video list items
+  function addPositionIndicators() {
+    console.log('Adding position indicators to', allItems.length, 'items');
+    
+    allItems.forEach((item, index) => {
+      // Skip if already has indicator
+      if (item.querySelector('[data-position-indicator]')) return;
+      
+      // The video ID is directly in the href attribute
+      const videoId = item.getAttribute('href');
+      console.log(`Item ${index} videoId:`, videoId);
+      
+      if (!videoId) return;
+      
+      // Check for saved position
+      const savedPosition = getSavedVideoPosition(videoId);
+      console.log(`Item ${index} savedPosition:`, savedPosition);
+      
+      if (!savedPosition || savedPosition.time <= VIDEO_POSITION_CONFIG.resumeThreshold) return;
+      
+      console.log(`Adding indicator to video ${videoId} at ${formatTime(savedPosition.time)}`);
+      
+      // Create position indicator
+      const indicator = document.createElement('div');
+      indicator.setAttribute('data-position-indicator', 'true');
+      indicator.textContent = `⏸ ${formatTime(savedPosition.time)}`;
+      indicator.style.cssText = `
+        background: rgba(68, 68, 68, 0.9);
+        color: white;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-top: 4px;
+        display: inline-block;
+        border: 1px solid #666;
+        width: fit-content;
+        max-width: max-content;
+      `;
+      
+      // Find the text container and append the indicator there
+      const textContainer = item.querySelector('.other_video_text');
+      console.log(`Item ${index} textContainer:`, textContainer);
+      
+      if (textContainer) {
+        textContainer.appendChild(indicator);
+        console.log(`Indicator added to item ${index}`);
+      }
+    });
+  }
+
   // Create title filter
   const titleFilter = document.createElement('input');
   titleFilter.type = 'text';
@@ -625,6 +675,7 @@ function initializePlaylistFeatures() {
     });
     
     updatePaginationControls();
+    addPositionIndicators(); // Add position indicators after displaying items
   }
 
   // Filter function
@@ -727,7 +778,9 @@ function initializePlaylistFeatures() {
     if (allItems.length === 0) {
       setTimeout(() => {
         initializeItems();
-        if (allItems.length > 0) displayCurrentPage();
+        if (allItems.length > 0) {
+          displayCurrentPage();
+        }
       }, 1000);
     } else {
       displayCurrentPage();
