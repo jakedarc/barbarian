@@ -162,6 +162,7 @@ function setupVideoPositionSaving(player, videoId) {
   let saveTimer;
   let hasResumed = false;
   let isResuming = false;
+  let shouldResume = false;
   
   // Save position periodically
   const savePosition = () => {
@@ -195,6 +196,7 @@ function setupVideoPositionSaving(player, videoId) {
     
     const savedPosition = getSavedVideoPosition(videoId);
     if (savedPosition && savedPosition.time > VIDEO_POSITION_CONFIG.resumeThreshold) {
+      shouldResume = true;
       hasResumed = true;
       autoResumeVideo(player, savedPosition.time);
     }
@@ -202,14 +204,22 @@ function setupVideoPositionSaving(player, videoId) {
   
   // Event listeners
   player.on('loadedmetadata', () => {
-    setTimeout(checkSavedPosition, 500);
+    setTimeout(checkSavedPosition, 100); // Check sooner
   });
   
   player.on('play', () => {
+    // If we should resume but haven't yet, pause and resume
+    if (shouldResume && !hasResumed) {
+      player.pause();
+      checkSavedPosition();
+      return;
+    }
+    
     if (!isResuming) {
       startSaving();
     }
   });
+  
   player.on('pause', () => {
     if (!isResuming) {
       savePosition();
@@ -230,7 +240,7 @@ function setupVideoPositionSaving(player, videoId) {
   
   // If video is already loaded, check immediately
   if (player.readyState() >= 1) {
-    setTimeout(checkSavedPosition, 500);
+    setTimeout(checkSavedPosition, 100);
   }
 }
 
