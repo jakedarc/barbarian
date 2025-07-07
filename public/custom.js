@@ -80,15 +80,45 @@ function formatTime(seconds) {
 function autoResumeVideo(player, savedTime) {
   console.log(`Auto-resuming video from ${formatTime(savedTime)}`);
   
-  const onSeeked = () => {
-    console.log('Resume completed');
-    player.isResuming = false;
-    player.off('seeked', onSeeked);
+  const performSeek = () => {
+    console.log('Performing seek to', savedTime);
+    
+    const onSeeked = () => {
+      console.log('Resume completed');
+      player.isResuming = false;
+      player.off('seeked', onSeeked);
+    };
+    
+    player.isResuming = true;
+    player.on('seeked', onSeeked);
+    player.currentTime(savedTime);
   };
   
-  player.isResuming = true;
-  player.on('seeked', onSeeked);
-  player.currentTime(savedTime);
+  // Check if video is ready for seeking
+  if (player.readyState() >= 2 && player.duration() > 0) { // HAVE_CURRENT_DATA or higher
+    console.log('Video ready, seeking immediately');
+    performSeek();
+  } else {
+    console.log('Video not ready, waiting for loadeddata event');
+    
+    const onLoadedData = () => {
+      console.log('Video loaded, now seeking');
+      player.off('loadeddata', onLoadedData);
+      // Add a small delay to ensure the video is fully ready
+      setTimeout(performSeek, 100);
+    };
+    
+    player.on('loadeddata', onLoadedData);
+    
+    // Fallback timeout in case loadeddata never fires
+    setTimeout(() => {
+      if (player.isResuming === undefined) { // Haven't started resuming yet
+        console.log('Timeout reached, attempting seek anyway');
+        player.off('loadeddata', onLoadedData);
+        performSeek();
+      }
+    }, 3000);
+  }
 }
 
 // Initialize video position saving
