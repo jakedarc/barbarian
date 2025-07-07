@@ -161,6 +161,58 @@ function setupVideoPositionSaving(player, videoId) {
   let saveTimer;
   let hasResumed = false;
   let shouldResume = false;
+  let startOverBtn = null;
+  
+  // Create start over button if there's a saved position
+  function createStartOverButton() {
+    const savedPosition = getSavedVideoPosition(videoId);
+    if (!savedPosition || savedPosition.time <= VIDEO_POSITION_CONFIG.resumeThreshold) return;
+    
+    // Find the title element
+    const titleElement = document.querySelector('.main_video_title');
+    if (!titleElement) return;
+    
+    startOverBtn = document.createElement('button');
+    startOverBtn.textContent = `Start Over (was at ${formatTime(savedPosition.time)})`;
+    startOverBtn.style.cssText = `
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      padding: 6px 12px;
+      margin-left: 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-block;
+      vertical-align: middle;
+    `;
+    
+    startOverBtn.addEventListener('mouseenter', () => {
+      startOverBtn.style.background = '#555';
+    });
+    
+    startOverBtn.addEventListener('mouseleave', () => {
+      startOverBtn.style.background = '#444';
+    });
+    
+    startOverBtn.addEventListener('click', () => {
+      clearVideoPosition(videoId);
+      player.currentTime(0);
+      player.pause();
+      removeStartOverButton();
+    });
+    
+    // Add it directly to the title element as inline content
+    titleElement.appendChild(startOverBtn);
+  }
+  
+  // Remove start over button
+  function removeStartOverButton() {
+    if (startOverBtn) {
+      startOverBtn.remove();
+      startOverBtn = null;
+    }
+  }
   
   // Save position periodically
   const savePosition = () => {
@@ -201,7 +253,10 @@ function setupVideoPositionSaving(player, videoId) {
   
   // Event listeners
   player.on('loadedmetadata', () => {
-    setTimeout(checkSavedPosition, 100);
+    setTimeout(() => {
+      checkSavedPosition();
+      createStartOverButton();
+    }, 100);
   });
   
   player.on('play', () => {
@@ -231,12 +286,16 @@ function setupVideoPositionSaving(player, videoId) {
   player.on('ended', () => {
     stopSaving();
     clearVideoPosition(videoId);
+    removeStartOverButton();
   });
   
   window.addEventListener('beforeunload', savePosition);
   
   if (player.readyState() >= 1) {
-    setTimeout(checkSavedPosition, 100);
+    setTimeout(() => {
+      checkSavedPosition();
+      createStartOverButton();
+    }, 100);
   }
 }
 
