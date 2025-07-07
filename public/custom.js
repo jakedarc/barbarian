@@ -452,17 +452,67 @@ function initializePlaylistFeatures() {
   clearBtn.className = 'custom-control-btn';
   clearBtn.type = 'button';
   
-  const chatToggleBtn = document.createElement('button');
-  chatToggleBtn.textContent = 'Show Chat';
-  chatToggleBtn.className = 'custom-control-btn';
-  chatToggleBtn.type = 'button';
+  // Create chat toggle button and put it in the title area
+  function createChatButton() {
+    const titleElement = document.querySelector('.main_video_title');
+    if (!titleElement) {
+      console.log('Title element not found, retrying...');
+      setTimeout(createChatButton, 500);
+      return;
+    }
+    
+    // Check if chat button already exists
+    if (titleElement.querySelector('[data-chat-button]')) {
+      return;
+    }
+    
+    const chatToggleBtn = document.createElement('button');
+    chatToggleBtn.textContent = 'Show Chat';
+    chatToggleBtn.setAttribute('data-chat-button', 'true');
+    chatToggleBtn.style.cssText = `
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      padding: 6px 12px;
+      margin-left: 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-block;
+      vertical-align: middle;
+    `;
+    
+    chatToggleBtn.addEventListener('mouseenter', () => {
+      chatToggleBtn.style.background = '#555';
+    });
+    
+    chatToggleBtn.addEventListener('mouseleave', () => {
+      chatToggleBtn.style.background = '#444';
+    });
+    
+    chatToggleBtn.addEventListener('click', () => {
+      const chatElement = document.querySelector('.chat');
+      if (chatElement) {
+        const isHidden = chatElement.style.display === 'none' || 
+                        getComputedStyle(chatElement).display === 'none';
+        chatElement.style.display = isHidden ? 'flex' : 'none';
+        chatToggleBtn.textContent = isHidden ? 'Hide Chat' : 'Show Chat';
+      }
+    });
+    
+    // Append chat button to title element
+    titleElement.appendChild(chatToggleBtn);
+    console.log('Chat button added to title');
+  }
+  
+  // Try to create chat button immediately and with retries
+  createChatButton();
 
   dateContainer.appendChild(fromLabel);
   dateContainer.appendChild(fromDate);
   dateContainer.appendChild(toLabel);
   dateContainer.appendChild(toDate);
   dateContainer.appendChild(clearBtn);
-  dateContainer.appendChild(chatToggleBtn);
 
   // Create pagination controls
   function createPaginationContainer(isBottom = false) {
@@ -643,16 +693,6 @@ function initializePlaylistFeatures() {
     fromPicker.clear();
     toPicker.clear();
     filterPlaylist();
-  });
-  
-  chatToggleBtn.addEventListener('click', () => {
-    const chatElement = document.querySelector('.chat');
-    if (chatElement) {
-      const isHidden = chatElement.style.display === 'none' || 
-                      getComputedStyle(chatElement).display === 'none';
-      chatElement.style.display = isHidden ? 'flex' : 'none';
-      chatToggleBtn.textContent = isHidden ? 'Hide Chat' : 'Show Chat';
-    }
   });
 
   // Pagination event listeners
